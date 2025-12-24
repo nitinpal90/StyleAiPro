@@ -7,9 +7,17 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 
 const getApiKey = () => {
-    const key = process.env.API_KEY;
+    /**
+     * Priority Check:
+     * 1. process.env.API_KEY (Standard for Node/CI)
+     * 2. import.meta.env.VITE_API_KEY (Standard for Vite/Vercel Client Apps)
+     * 3. window.process.env.API_KEY (Fallback for some injection methods)
+     */
+    const env = (import.meta as any).env || {};
+    const key = process.env.API_KEY || env.VITE_API_KEY || (window as any).process?.env?.API_KEY;
+    
     if (!key || key === 'undefined' || key === '') {
-        throw new Error("API_KEY_MISSING: The Gemini API Key is not configured. Please add 'API_KEY' to your environment variables in Vercel and redeploy.");
+        throw new Error("API_KEY_MISSING: The Gemini API Key is not configured. 1. Go to Vercel Settings -> Environment Variables. 2. Ensure 'API_KEY' is added. 3. Go to Deployments -> Click 'Redeploy' to apply changes.");
     }
     return key;
 };
