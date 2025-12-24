@@ -7,17 +7,30 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 
 const getApiKey = () => {
-    /**
-     * Priority Check:
-     * 1. process.env.API_KEY (Standard for Node/CI)
-     * 2. import.meta.env.VITE_API_KEY (Standard for Vite/Vercel Client Apps)
-     * 3. window.process.env.API_KEY (Fallback for some injection methods)
-     */
-    const env = (import.meta as any).env || {};
-    const key = process.env.API_KEY || env.VITE_API_KEY || (window as any).process?.env?.API_KEY;
+    let key = '';
+    
+    // 1. Try standard process.env (often replaced by bundlers at build time)
+    try {
+        key = process.env.API_KEY || '';
+    } catch (e) {}
+
+    // 2. Try Vite-specific import.meta.env (Required for most Vercel/Vite client apps)
+    if (!key || key === 'undefined') {
+        try {
+            const env = (import.meta as any).env;
+            key = env?.VITE_API_KEY || env?.API_KEY || '';
+        } catch (e) {}
+    }
+
+    // 3. Try window-level injection (common in some custom environments)
+    if (!key || key === 'undefined') {
+        try {
+            key = (window as any).process?.env?.API_KEY || '';
+        } catch (e) {}
+    }
     
     if (!key || key === 'undefined' || key === '') {
-        throw new Error("API_KEY_MISSING: The Gemini API Key is not configured. 1. Go to Vercel Settings -> Environment Variables. 2. Ensure 'API_KEY' is added. 3. Go to Deployments -> Click 'Redeploy' to apply changes.");
+        throw new Error("API_KEY_MISSING: The Gemini API Key is not found in the browser. IMPORTANT: In Vercel, you must name your variable 'VITE_API_KEY' and then REDEPLOY your project for it to take effect.");
     }
     return key;
 };
