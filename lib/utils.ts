@@ -20,18 +20,24 @@ export function getFriendlyErrorMessage(error: unknown, context: string): string
         rawMessage = String(error);
     }
 
-    // Specific check for missing key
-    if (rawMessage.includes("API_KEY_MISSING") || rawMessage.includes("API Key must be set") || rawMessage.includes("API_KEY is not defined")) {
-        return "Config Error: Gemini API Key is missing. Please add 'API_KEY' to your Vercel Environment Variables and redeploy the project.";
+    // Capture the exact error shown in the user's screenshot or our custom throw
+    const isMissingKey = 
+        rawMessage.includes("MISSING_API_KEY_SETUP") || 
+        rawMessage.includes("An API Key must be set when running in a browser") ||
+        rawMessage.includes("API_KEY_MISSING") ||
+        rawMessage.includes("API key not found");
+
+    if (isMissingKey) {
+        const platform = window.location.hostname.includes('netlify') ? 'Netlify' : 'Vercel';
+        return `Setup Required: Your API key is not active yet. \n\n1. Go to ${platform} Settings -> Environment Variables. \n2. Add 'VITE_API_KEY'. \n3. IMPORTANT: Go to the 'Deploys' tab and trigger a 'NEW DEPLOY' to apply the changes.`;
     }
 
-    // Check for specific unsupported MIME type error from Gemini API
     if (rawMessage.toLowerCase().includes("unsupported mime type")) {
-        return `File type not supported. Please use PNG, JPEG, or WEBP.`;
+        return `Format Error: Please use a standard image format like PNG or JPG.`;
     }
 
-    if (rawMessage.includes("API key not found") || (rawMessage.includes("INVALID_ARGUMENT") && rawMessage.includes("key"))) {
-        return "The AI service is temporarily unavailable due to an invalid configuration. Please check your API key.";
+    if (rawMessage.includes("INVALID_ARGUMENT")) {
+        return "The request was invalid. Please try a different or clearer image.";
     }
     
     return rawMessage ? rawMessage : context;

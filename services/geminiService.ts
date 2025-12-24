@@ -9,7 +9,7 @@ import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 const getApiKey = () => {
     let key = '';
     
-    // 1. Try Vite standard (Works on Netlify, Vercel, Cloudflare, Local)
+    // 1. Check Vite standard (Build-time injection for Netlify/Vercel)
     try {
         const env = (import.meta as any).env;
         if (env) {
@@ -17,33 +17,22 @@ const getApiKey = () => {
         }
     } catch (e) {}
 
-    // 2. Try Node process standard (Backup for CI/CD)
-    if (!key || key === 'undefined' || key === '') {
+    // 2. Check Process environment (Runtime fallback)
+    if (!key || key === 'undefined') {
         try {
             key = (process.env as any).VITE_API_KEY || (process.env as any).API_KEY || '';
         } catch (e) {}
     }
 
-    // 3. Try global window injection (Final fallback)
-    if (!key || key === 'undefined' || key === '') {
-        try {
-            key = (window as any).VITE_API_KEY || (window as any).process?.env?.API_KEY || '';
-        } catch (e) {}
+    // 3. Final sanitization
+    const sanitizedKey = key?.trim();
+    
+    if (!sanitizedKey || sanitizedKey === 'undefined' || sanitizedKey === '') {
+        // We throw a specific string that our error handler in utils.ts will catch
+        throw new Error("MISSING_API_KEY_SETUP");
     }
     
-    if (!key || key === 'undefined' || key === '') {
-        const platform = window.location.hostname.includes('vercel') ? 'Vercel' : 
-                         window.location.hostname.includes('netlify') ? 'Netlify' : 'Host';
-        
-        const errorMsg = `CONFIG_ERROR: API Key not found. \n\n` +
-                        `TO FIX THIS ON ${platform.toUpperCase()}:\n` +
-                        `1. Go to your Dashboard -> Site Settings.\n` +
-                        `2. Find Environment Variables.\n` +
-                        `3. Add a variable named 'VITE_API_KEY' (Must start with VITE_).\n` +
-                        `4. Trigger a NEW DEPLOY (this is mandatory to update the code).`;
-        throw new Error(errorMsg);
-    }
-    return key;
+    return sanitizedKey;
 };
 
 const fileToPart = async (file: File) => {
@@ -72,7 +61,7 @@ const dataUrlToPart = (dataUrl: string) => {
 
 const handleApiResponse = (response: GenerateContentResponse): string => {
     if (response.promptFeedback?.blockReason) {
-        throw new Error(`AI Blocked: ${response.promptFeedback.blockReason}. This usually happens if the input image violates safety filters.`);
+        throw new Error(`AI Blocked: ${response.promptFeedback.blockReason}`);
     }
 
     const candidate = response.candidates?.[0];
@@ -84,18 +73,19 @@ const handleApiResponse = (response: GenerateContentResponse): string => {
     }
 
     if (candidate?.finishReason && candidate.finishReason !== 'STOP') {
-        throw new Error(`AI failed to finish: ${candidate.finishReason}. Try a different, clearer photo.`);
+        throw new Error(`AI failed: ${candidate.finishReason}`);
     }
     
-    throw new Error("AI completed but returned no image. Please ensure your photo is high-quality and clearly shows a person.");
+    throw new Error("AI returned no image. Try a clearer photo.");
 };
 
 const model = 'gemini-2.5-flash-image';
 
 export const generateModelImage = async (userImage: File): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: getApiKey() });
+    const apiKey = getApiKey();
+    const ai = new GoogleGenAI({ apiKey });
     const userImagePart = await fileToPart(userImage);
-    const prompt = "High-end fashion photography. Professional full-body model standing in a studio with a neutral gray background. Photorealistic, 8k resolution, sharp focus. Return ONLY the image.";
+    const prompt = "High-end fashion photography. Professional full-body model standing in a studio with a neutral gray background. Return ONLY the image.";
     const response = await ai.models.generateContent({
         model,
         contents: { parts: [userImagePart, { text: prompt }] },
@@ -105,10 +95,11 @@ export const generateModelImage = async (userImage: File): Promise<string> => {
 };
 
 export const generateVirtualTryOnImage = async (modelImageUrl: string, garmentImage: File): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: getApiKey() });
+    const apiKey = getApiKey();
+    const ai = new GoogleGenAI({ apiKey });
     const modelImagePart = dataUrlToPart(modelImageUrl);
     const garmentImagePart = await fileToPart(garmentImage);
-    const prompt = "E-commerce virtual try-on. Fit the garment precisely onto the model. Keep face, pose, and background exactly the same. Photorealistic fabric texture. Return ONLY the final image.";
+    const prompt = "E-commerce virtual try-on. Fit the garment precisely onto the model. Keep face, pose, and background exactly the same. Return ONLY the final image.";
     const response = await ai.models.generateContent({
         model,
         contents: { parts: [modelImagePart, garmentImagePart, { text: prompt }] },
@@ -118,9 +109,10 @@ export const generateVirtualTryOnImage = async (modelImageUrl: string, garmentIm
 };
 
 export const generatePoseVariation = async (tryOnImageUrl: string, poseInstruction: string): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: getApiKey() });
+    const apiKey = getApiKey();
+    const ai = new GoogleGenAI({ apiKey });
     const tryOnImagePart = dataUrlToPart(tryOnImageUrl);
-    const prompt = `Change the model's pose to: "${poseInstruction}". Keep identity, outfit, and studio background identical. Hyper-realistic results only. Return ONLY the image.`;
+    const prompt = `Change the model's pose to: "${poseInstruction}". Keep identity and outfit identical. Return ONLY the image.`;
     const response = await ai.models.generateContent({
         model,
         contents: { parts: [tryOnImagePart, { text: prompt }] },
