@@ -20,18 +20,18 @@ export function getFriendlyErrorMessage(error: unknown, context: string): string
         rawMessage = String(error);
     }
 
-    // Check for specific GenAI SDK error regarding missing API Key
-    if (rawMessage.includes("API Key must be set") || rawMessage.includes("API_KEY is not defined")) {
-        return "Gemini API Key is missing. Please set the 'API_KEY' environment variable in your project settings to enable AI features.";
+    // Specific check for missing key
+    if (rawMessage.includes("API_KEY_MISSING") || rawMessage.includes("API Key must be set") || rawMessage.includes("API_KEY is not defined")) {
+        return "Config Error: Gemini API Key is missing. Please add 'API_KEY' to your Vercel Environment Variables and redeploy the project.";
     }
 
     // Check for specific unsupported MIME type error from Gemini API
     if (rawMessage.toLowerCase().includes("unsupported mime type")) {
-        return `File type not supported. Please use PNG, JPEG, or WEBP. (AVIF is currently not supported by the AI engine).`;
+        return `File type not supported. Please use PNG, JPEG, or WEBP.`;
     }
 
     if (rawMessage.includes("API key not found") || (rawMessage.includes("INVALID_ARGUMENT") && rawMessage.includes("key"))) {
-        return "The AI service is temporarily unavailable due to an invalid configuration. Please contact the administrator.";
+        return "The AI service is temporarily unavailable due to an invalid configuration. Please check your API key.";
     }
     
     return rawMessage ? rawMessage : context;

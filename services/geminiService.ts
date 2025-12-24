@@ -6,6 +6,14 @@
 
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 
+const getApiKey = () => {
+    const key = process.env.API_KEY;
+    if (!key || key === 'undefined' || key === '') {
+        throw new Error("API_KEY_MISSING: The Gemini API Key is not configured. Please add 'API_KEY' to your environment variables in Vercel and redeploy.");
+    }
+    return key;
+};
+
 const fileToPart = async (file: File) => {
     const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -59,7 +67,7 @@ const handleApiResponse = (response: GenerateContentResponse): string => {
 const model = 'gemini-2.5-flash-image';
 
 export const generateModelImage = async (userImage: File): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     const userImagePart = await fileToPart(userImage);
     const prompt = "You are an expert fashion photographer AI. Transform the person in this image into a full-body fashion model photo suitable for an e-commerce website. The background must be a clean, neutral studio backdrop (light gray, #f0f0f0). The person should have a neutral, professional model expression. Preserve the person's identity, unique features, and body type, but place them in a standard, relaxed standing model pose. The final image must be photorealistic and extremely sharp. Return ONLY the final image.";
     const response = await ai.models.generateContent({
@@ -75,7 +83,7 @@ export const generateModelImage = async (userImage: File): Promise<string> => {
 };
 
 export const generateVirtualTryOnImage = async (modelImageUrl: string, garmentImage: File): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     const modelImagePart = dataUrlToPart(modelImageUrl);
     const garmentImagePart = await fileToPart(garmentImage);
     const prompt = `You are an expert virtual try-on AI. You will be given a 'model image' and a 'garment image'. Your task is to create a new high-resolution photorealistic image where the person from the 'model image' is wearing the clothing from the 'garment image'.
@@ -99,7 +107,7 @@ export const generateVirtualTryOnImage = async (modelImageUrl: string, garmentIm
 };
 
 export const generatePoseVariation = async (tryOnImageUrl: string, poseInstruction: string): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     const tryOnImagePart = dataUrlToPart(tryOnImageUrl);
     const prompt = `You are an expert fashion photographer AI. Take this image and regenerate it from a different perspective with extreme photorealism. The person, clothing, and background style must remain identical. The new perspective should be: "${poseInstruction}". Return ONLY the final image.`;
     const response = await ai.models.generateContent({
