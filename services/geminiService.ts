@@ -9,28 +9,35 @@ import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 const getApiKey = () => {
     let key = '';
     
-    // 1. Try Vite's preferred method (Required for Vercel + React/Vite)
+    // 1. Vite / Vercel Client-Side Standard (Most Important)
     try {
         const env = (import.meta as any).env;
-        key = env?.VITE_API_KEY || env?.API_KEY || '';
+        if (env) {
+            key = env.VITE_API_KEY || env.API_KEY || '';
+        }
     } catch (e) {}
 
-    // 2. Fallback to process.env (Node/CI environments)
-    if (!key || key === 'undefined' || key === '') {
+    // 2. Node / CI / Process Fallback
+    if (!key || key === 'undefined') {
         try {
-            key = process.env.API_KEY || (process.env as any).VITE_API_KEY || '';
+            key = (process.env as any).VITE_API_KEY || (process.env as any).API_KEY || '';
         } catch (e) {}
     }
 
-    // 3. Fallback to window object injection
-    if (!key || key === 'undefined' || key === '') {
+    // 3. Global / Window Fallback
+    if (!key || key === 'undefined') {
         try {
-            key = (window as any).process?.env?.API_KEY || (window as any).VITE_API_KEY || '';
+            key = (window as any).VITE_API_KEY || (window as any).process?.env?.API_KEY || '';
         } catch (e) {}
     }
     
     if (!key || key === 'undefined' || key === '') {
-        throw new Error("CONFIG_ERROR: Gemini API Key not found. \n\nFIX: \n1. Go to Vercel Settings > Environment Variables. \n2. Add 'VITE_API_KEY' (Must have VITE_ prefix). \n3. Go to Deployments > Click 'Redeploy' to apply.");
+        const errorMsg = "CONFIG_ERROR: Gemini API Key not found in the browser environment.\n\n" +
+                        "TO FIX THIS ON VERCEL:\n" +
+                        "1. Go to Project Settings > Environment Variables.\n" +
+                        "2. Ensure your variable is named 'VITE_API_KEY' (it must start with VITE_).\n" +
+                        "3. Go to the 'Deployments' tab and click 'Redeploy' on your latest build.";
+        throw new Error(errorMsg);
     }
     return key;
 };
@@ -61,28 +68,22 @@ const dataUrlToPart = (dataUrl: string) => {
 
 const handleApiResponse = (response: GenerateContentResponse): string => {
     if (response.promptFeedback?.blockReason) {
-        const { blockReason, blockReasonMessage } = response.promptFeedback;
-        const errorMessage = `Request was blocked. Reason: ${blockReason}. ${blockReasonMessage || ''}`;
-        throw new Error(errorMessage);
+        throw new Error(`Request blocked: ${response.promptFeedback.blockReason}`);
     }
 
-    for (const candidate of response.candidates ?? []) {
-        const imagePart = candidate.content?.parts?.find(part => part.inlineData);
-        if (imagePart?.inlineData) {
-            const { mimeType, data } = imagePart.inlineData;
-            return `data:${mimeType};base64,${data}`;
-        }
+    const candidate = response.candidates?.[0];
+    const imagePart = candidate?.content?.parts?.find(part => part.inlineData);
+    
+    if (imagePart?.inlineData) {
+        const { mimeType, data } = imagePart.inlineData;
+        return `data:${mimeType};base64,${data}`;
     }
 
-    const finishReason = response.candidates?.[0]?.finishReason;
-    if (finishReason && finishReason !== 'STOP') {
-        const errorMessage = `Generation stopped. Reason: ${finishReason}. Try a different photo or check your safety settings.`;
-        throw new Error(errorMessage);
+    if (candidate?.finishReason && candidate.finishReason !== 'STOP') {
+        throw new Error(`Generation failed: ${candidate.finishReason}. Try a different image.`);
     }
     
-    const textFeedback = response.text?.trim();
-    const errorMessage = `AI did not return an image. ` + (textFeedback ? `Model says: "${textFeedback}"` : "Please try again with a clearer photo.");
-    throw new Error(errorMessage);
+    throw new Error("The AI didn't return an image. Please try a clearer photo.");
 };
 
 const model = 'gemini-2.5-flash-image';
@@ -90,15 +91,11 @@ const model = 'gemini-2.5-flash-image';
 export const generateModelImage = async (userImage: File): Promise<string> => {
     const ai = new GoogleGenAI({ apiKey: getApiKey() });
     const userImagePart = await fileToPart(userImage);
-    const prompt = "You are an expert fashion photographer AI. Transform the person in this image into a full-body fashion model photo suitable for an e-commerce website. The background must be a clean, neutral studio backdrop (light gray, #f0f0f0). The person should have a neutral, professional model expression. Preserve the person's identity, unique features, and body type, but place them in a standard, relaxed standing model pose. The final image must be photorealistic and extremely sharp. Return ONLY the final image.";
+    const prompt = "You are an expert fashion photographer. Transform this person into a professional full-body fashion model. Use a clean neutral gray studio background. Preserve identity and body shape. Return ONLY the image.";
     const response = await ai.models.generateContent({
         model,
         contents: { parts: [userImagePart, { text: prompt }] },
-        config: {
-            imageConfig: {
-              aspectRatio: "3:4"
-            }
-        },
+        config: { imageConfig: { aspectRatio: "3:4" } },
     });
     return handleApiResponse(response);
 };
@@ -107,21 +104,11 @@ export const generateVirtualTryOnImage = async (modelImageUrl: string, garmentIm
     const ai = new GoogleGenAI({ apiKey: getApiKey() });
     const modelImagePart = dataUrlToPart(modelImageUrl);
     const garmentImagePart = await fileToPart(garmentImage);
-    const prompt = `You are an expert virtual try-on AI. You will be given a 'model image' and a 'garment image'. Your task is to create a new high-resolution photorealistic image where the person from the 'model image' is wearing the clothing from the 'garment image'.
-
-**Crucial Rules:**
-1.  **Complete Garment Replacement:** You MUST completely REMOVE and REPLACE the clothing item worn by the person in the 'model image' with the new garment.
-2.  **Preserve the Model:** The person's face, hair, and body shape MUST remain unchanged.
-3.  **Preserve the Background:** The entire background MUST be preserved.
-4.  **Output:** Return ONLY the final, edited image.`;
+    const prompt = "Virtual try-on: Replace the clothing on the model with the provided garment. Keep the person's face, pose, and background identical. High resolution, sharp detail. Return ONLY the final image.";
     const response = await ai.models.generateContent({
         model,
         contents: { parts: [modelImagePart, garmentImagePart, { text: prompt }] },
-        config: {
-            imageConfig: {
-              aspectRatio: "3:4"
-            }
-        },
+        config: { imageConfig: { aspectRatio: "3:4" } },
     });
     return handleApiResponse(response);
 };
@@ -129,15 +116,11 @@ export const generateVirtualTryOnImage = async (modelImageUrl: string, garmentIm
 export const generatePoseVariation = async (tryOnImageUrl: string, poseInstruction: string): Promise<string> => {
     const ai = new GoogleGenAI({ apiKey: getApiKey() });
     const tryOnImagePart = dataUrlToPart(tryOnImageUrl);
-    const prompt = `You are an expert fashion photographer AI. Take this image and regenerate it from a different perspective with extreme photorealism. The person, clothing, and background style must remain identical. The new perspective should be: "${poseInstruction}". Return ONLY the final image.`;
+    const prompt = `Fashion photography: Change the pose to "${poseInstruction}". Keep person, clothes, and background identical. Extremely realistic. Return ONLY the image.`;
     const response = await ai.models.generateContent({
         model,
         contents: { parts: [tryOnImagePart, { text: prompt }] },
-        config: {
-            imageConfig: {
-              aspectRatio: "3:4"
-            }
-        },
+        config: { imageConfig: { aspectRatio: "3:4" } },
     });
     return handleApiResponse(response);
 };
