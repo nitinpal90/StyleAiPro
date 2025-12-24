@@ -9,28 +9,28 @@ import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 const getApiKey = () => {
     let key = '';
     
-    // 1. Try standard process.env (often replaced by bundlers at build time)
+    // 1. Try Vite's preferred method (Required for Vercel + React/Vite)
     try {
-        key = process.env.API_KEY || '';
+        const env = (import.meta as any).env;
+        key = env?.VITE_API_KEY || env?.API_KEY || '';
     } catch (e) {}
 
-    // 2. Try Vite-specific import.meta.env (Required for most Vercel/Vite client apps)
-    if (!key || key === 'undefined') {
+    // 2. Fallback to process.env (Node/CI environments)
+    if (!key || key === 'undefined' || key === '') {
         try {
-            const env = (import.meta as any).env;
-            key = env?.VITE_API_KEY || env?.API_KEY || '';
+            key = process.env.API_KEY || (process.env as any).VITE_API_KEY || '';
         } catch (e) {}
     }
 
-    // 3. Try window-level injection (common in some custom environments)
-    if (!key || key === 'undefined') {
+    // 3. Fallback to window object injection
+    if (!key || key === 'undefined' || key === '') {
         try {
-            key = (window as any).process?.env?.API_KEY || '';
+            key = (window as any).process?.env?.API_KEY || (window as any).VITE_API_KEY || '';
         } catch (e) {}
     }
     
     if (!key || key === 'undefined' || key === '') {
-        throw new Error("API_KEY_MISSING: The Gemini API Key is not found in the browser. IMPORTANT: In Vercel, you must name your variable 'VITE_API_KEY' and then REDEPLOY your project for it to take effect.");
+        throw new Error("CONFIG_ERROR: Gemini API Key not found. \n\nFIX: \n1. Go to Vercel Settings > Environment Variables. \n2. Add 'VITE_API_KEY' (Must have VITE_ prefix). \n3. Go to Deployments > Click 'Redeploy' to apply.");
     }
     return key;
 };
@@ -76,15 +76,15 @@ const handleApiResponse = (response: GenerateContentResponse): string => {
 
     const finishReason = response.candidates?.[0]?.finishReason;
     if (finishReason && finishReason !== 'STOP') {
-        const errorMessage = `Image generation stopped unexpectedly. Reason: ${finishReason}. This often relates to safety settings.`;
+        const errorMessage = `Generation stopped. Reason: ${finishReason}. Try a different photo or check your safety settings.`;
         throw new Error(errorMessage);
     }
+    
     const textFeedback = response.text?.trim();
-    const errorMessage = `The AI model did not return an image. ` + (textFeedback ? `The model responded with text: "${textFeedback}"` : "This can happen due to safety filters or if the request is too complex. Please try a different image.");
+    const errorMessage = `AI did not return an image. ` + (textFeedback ? `Model says: "${textFeedback}"` : "Please try again with a clearer photo.");
     throw new Error(errorMessage);
 };
 
-// Use Gemini 2.5 Flash for balanced performance and high-quality generation
 const model = 'gemini-2.5-flash-image';
 
 export const generateModelImage = async (userImage: File): Promise<string> => {
@@ -110,11 +110,10 @@ export const generateVirtualTryOnImage = async (modelImageUrl: string, garmentIm
     const prompt = `You are an expert virtual try-on AI. You will be given a 'model image' and a 'garment image'. Your task is to create a new high-resolution photorealistic image where the person from the 'model image' is wearing the clothing from the 'garment image'.
 
 **Crucial Rules:**
-1.  **Complete Garment Replacement:** You MUST completely REMOVE and REPLACE the clothing item worn by the person in the 'model image' with the new garment. No part of the original clothing should be visible.
-2.  **Preserve the Model:** The person's face, hair, body shape, and pose MUST remain unchanged.
-3.  **Preserve the Background:** The entire background MUST be preserved perfectly.
-4.  **High Clarity:** Ensure the fabric texture and details of the garment are extremely sharp and realistic.
-5.  **Output:** Return ONLY the final, edited image.`;
+1.  **Complete Garment Replacement:** You MUST completely REMOVE and REPLACE the clothing item worn by the person in the 'model image' with the new garment.
+2.  **Preserve the Model:** The person's face, hair, and body shape MUST remain unchanged.
+3.  **Preserve the Background:** The entire background MUST be preserved.
+4.  **Output:** Return ONLY the final, edited image.`;
     const response = await ai.models.generateContent({
         model,
         contents: { parts: [modelImagePart, garmentImagePart, { text: prompt }] },
