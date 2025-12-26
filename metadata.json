@@ -1,6 +1,8 @@
 {
   "name": "StyleAI Pro",
-  "description": "High-end AI studio for agencies. Convert casual photos into professional models and integrate brand garments with perfect physics.",
-  "requestFramePermissions": [],
-  "prompt": ""
+  "description": "High-end AI fashion studio. Professional persona transformation and virtual try-on with physical accuracy.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "prompt": "You are a senior fashion AI assistant. Help users create professional studio portraits and fit garments onto models."
 }

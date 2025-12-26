@@ -7,18 +7,23 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 
 /**
- * Robust API key detection for different deployment platforms.
+ * Robust API key detection for Cloudflare and Netlify.
  */
 const getApiKey = (): string => {
-    // Priority 1: System process env (Hard requirement)
-    if (process.env.API_KEY && process.env.API_KEY !== 'undefined') {
+    // 1. Check for standard API_KEY (Cloudflare/Netlify standard)
+    if (typeof process !== 'undefined' && process.env.API_KEY) {
         return process.env.API_KEY;
     }
     
-    // Priority 2: Vite-prefixed fallback (Commonly used by users)
+    // 2. Check for VITE_ prefixed key (Vite/Client-side standard)
     const viteKey = (process.env as any).VITE_API_KEY;
     if (viteKey && viteKey !== 'undefined') {
         return viteKey;
+    }
+
+    // 3. Last resort: check if injected into global scope by some build tools
+    if ((window as any)._ENV_?.API_KEY) {
+        return (window as any)._ENV_.API_KEY;
     }
 
     throw new Error("MISSING_API_KEY");
@@ -41,10 +46,9 @@ const handleApiResponse = (response: GenerateContentResponse): string => {
         throw new Error(`AI failed: ${candidate.finishReason}`);
     }
     
-    throw new Error("AI returned no image output. The image might be too complex or unclear.");
+    throw new Error("AI returned no image output. The image may be too complex.");
 };
 
-// Standard model name to avoid "preview" quota restrictions
 const MODEL_NAME = 'gemini-2.5-flash-image';
 
 export const generateModelImage = async (userImage: File): Promise<string> => {
@@ -60,7 +64,7 @@ export const generateModelImage = async (userImage: File): Promise<string> => {
     const data = dataUrl.split(',')[1];
     const userImagePart = { inlineData: { mimeType, data } };
 
-    const prompt = "PROFESSIONAL PERSONA TRANSFORMATION: Convert this casual photo into a high-end fashion model studio portrait. 8k resolution, commercial lighting. Maintain facial identity. Return ONLY the final image.";
+    const prompt = "PROFESSIONAL PERSONA TRANSFORMATION: Convert this person into a high-end fashion studio portrait. 8k resolution, professional studio lighting. Preserve facial features perfectly. Return ONLY the final image.";
     
     const response = await ai.models.generateContent({
         model: MODEL_NAME,
@@ -87,9 +91,7 @@ export const generateVirtualTryOnImage = async (modelImageUrl: string, garmentIm
     const garmentData = garmentDataUrl.split(',')[1];
     const garmentImagePart = { inlineData: { mimeType: garmentMimeType, data: garmentData } };
     
-    const prompt = `EXACT CLOTH INTEGRATION: Fit the clothing from the second image onto the person in the first image. 
-    Maintain EXACT pattern, color, and texture. Match the lighting perfectly.
-    Return ONLY the final high-resolution image.`;
+    const prompt = `EXACT CLOTH INTEGRATION: Fit the garment from the second image onto the person in the first image. Preserve patterns and colors exactly. Return ONLY the final high-resolution image.`;
 
     const response = await ai.models.generateContent({
         model: MODEL_NAME,
@@ -107,7 +109,7 @@ export const generatePoseVariation = async (tryOnImageUrl: string, poseInstructi
     const data = tryOnImageUrl.split(',')[1];
     const tryOnImagePart = { inlineData: { mimeType, data } };
     
-    const prompt = `STANCE VARIATION: Change the model's pose to: "${poseInstruction}". Keep identity and garment details EXACT. Return ONLY the final image.`;
+    const prompt = `STANCE VARIATION: Update the person's pose to: "${poseInstruction}". Keep identity and clothes identical. Return ONLY the final image.`;
     
     const response = await ai.models.generateContent({
         model: MODEL_NAME,

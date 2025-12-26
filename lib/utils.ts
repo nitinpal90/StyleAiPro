@@ -20,23 +20,23 @@ export function getFriendlyErrorMessage(error: unknown, context: string): string
         rawMessage = JSON.stringify(error);
     }
 
-    // Specific logic for 429 Quota / Limit 0 errors
+    // Handle 429 Quota / Resource Exhausted errors
     if (rawMessage.includes("429") || rawMessage.includes("quota exceeded") || rawMessage.includes("RESOURCE_EXHAUSTED")) {
         if (rawMessage.includes("limit: 0")) {
-            return "Critical Quota Error: Your Google AI Studio project has a '0 limit' for this model. \n\nFIX: Go to ai.google.dev and enable Billing for your project. Free tier users are occasionally restricted to 0 requests during high-traffic periods.";
+            return "Quota Restriction: Your project is currently at '0 limit'. \n\nFIX: Go to https://ai.google.dev/gemini-api/docs/billing and ensure you have enabled a payment method. Google often restricts free tier users with high activity.";
         }
-        return "Rate Limit: Too many requests. Please wait 60 seconds. Consider upgrading your plan at ai.google.dev.";
+        return "Rate Limit: Too many requests. Wait 60 seconds and try again. For higher limits, check your billing status at Google AI Studio.";
     }
 
-    // Missing API Key
+    // Handle missing API Key
     if (rawMessage.includes("MISSING_API_KEY")) {
-        return "Setup Error: API Key not found. \n\nOn Netlify: Add 'API_KEY' to your Environment Variables, then RE-DEPLOY the site.";
+        return "Setup Error: API Key not detected in Netlify. \n\nFIX: Go to Site Settings > Environment Variables, add 'API_KEY', and then click 'Clear cache and deploy site' in the Deploys tab.";
     }
 
-    // Filter/Safety
+    // Handle Safety blocks
     if (rawMessage.toLowerCase().includes("safety") || rawMessage.includes("blocked")) {
-        return "AI Safety Block: The image content was flagged as sensitive. Please try a different photo.";
+        return "AI Safety Filter: This image was flagged. Please try a different, more professional photo.";
     }
 
-    return rawMessage.length > 150 ? "A studio error occurred. Please try again." : (rawMessage || context);
+    return rawMessage.length > 100 ? "A studio error occurred. Please refresh or check your API key." : (rawMessage || context);
 }
