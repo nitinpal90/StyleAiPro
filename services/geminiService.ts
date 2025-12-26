@@ -6,6 +6,24 @@
 
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 
+/**
+ * Robust API key detection for different deployment platforms.
+ * Works with Vercel (VITE_ prefix), Netlify, and standard process envs.
+ */
+const getApiKey = (): string => {
+    // 1. Try standard process.env.API_KEY (System standard)
+    if (process.env.API_KEY) return process.env.API_KEY;
+    
+    // 2. Try VITE_ prefix (Standard for Vite/React dev environments)
+    // Note: In some environments like Vite, this is accessed via import.meta.env
+    // but the system instruction requires process.env usage.
+    const viteKey = (process.env as any).VITE_API_KEY;
+    if (viteKey) return viteKey;
+
+    // Fallback error
+    throw new Error("MISSING_API_KEY");
+};
+
 const handleApiResponse = (response: GenerateContentResponse): string => {
     if (response.promptFeedback?.blockReason) {
         throw new Error(`AI Blocked: ${response.promptFeedback.blockReason}`);
@@ -23,15 +41,13 @@ const handleApiResponse = (response: GenerateContentResponse): string => {
         throw new Error(`AI failed: ${candidate.finishReason}`);
     }
     
-    throw new Error("AI returned no image output. Try using a more standard lighting/pose.");
+    throw new Error("AI returned no image output. Ensure your images are high quality.");
 };
 
-// Use the stable model name as per instructions to avoid preview-tier 0-limit errors
 const MODEL_NAME = 'gemini-2.5-flash-image';
 
 export const generateModelImage = async (userImage: File): Promise<string> => {
-    // Exclusively use process.env.API_KEY as per system requirements
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     
     const dataUrl = await new Promise<string>((resolve) => {
         const reader = new FileReader();
@@ -43,7 +59,7 @@ export const generateModelImage = async (userImage: File): Promise<string> => {
     const data = dataUrl.split(',')[1];
     const userImagePart = { inlineData: { mimeType, data } };
 
-    const prompt = "PROFESSIONAL PERSONA TRANSFORMATION: Take this person and place them in a high-end fashion studio setting. Use professional commercial lighting and 8k photorealistic quality. Keep facial features identical but professionalized. Return ONLY the final professional image.";
+    const prompt = "PROFESSIONAL PERSONA TRANSFORMATION: Convert this person into a high-end fashion studio portrait. Use 8k photorealistic quality and commercial studio lighting. Preserve facial identity perfectly. Return ONLY the final professional image.";
     
     const response = await ai.models.generateContent({
         model: MODEL_NAME,
@@ -55,7 +71,7 @@ export const generateModelImage = async (userImage: File): Promise<string> => {
 };
 
 export const generateVirtualTryOnImage = async (modelImageUrl: string, garmentImage: File): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     
     const modelMimeType = modelImageUrl.split(':')[1].split(';')[0];
     const modelData = modelImageUrl.split(',')[1];
@@ -70,8 +86,8 @@ export const generateVirtualTryOnImage = async (modelImageUrl: string, garmentIm
     const garmentData = garmentDataUrl.split(',')[1];
     const garmentImagePart = { inlineData: { mimeType: garmentMimeType, data: garmentData } };
     
-    const prompt = `EXACT CLOTH INTEGRATION: Fit the garment from the second image onto the model from the first image. 
-    CRITICAL: Maintain the EXACT pattern, color, and texture of the garment. Ensure realistic drape and physics. 
+    const prompt = `EXACT CLOTH INTEGRATION: Put the clothing from the second image onto the model in the first image. 
+    Maintain EXACT pattern, color, and texture. Match the model's pose and lighting perfectly.
     Return ONLY the final high-resolution image.`;
 
     const response = await ai.models.generateContent({
@@ -84,13 +100,13 @@ export const generateVirtualTryOnImage = async (modelImageUrl: string, garmentIm
 };
 
 export const generatePoseVariation = async (tryOnImageUrl: string, poseInstruction: string): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     
     const mimeType = tryOnImageUrl.split(':')[1].split(';')[0];
     const data = tryOnImageUrl.split(',')[1];
     const tryOnImagePart = { inlineData: { mimeType, data } };
     
-    const prompt = `STANCE VARIATION: Update the model's stance to: "${poseInstruction}". Preserve the model's identity and the EXACT fabric details of the clothing. Return ONLY the final image.`;
+    const prompt = `STANCE VARIATION: Change the model's pose to: "${poseInstruction}". Keep identity and clothing EXACTLY as they are. Maintain the studio lighting. Return ONLY the final image.`;
     
     const response = await ai.models.generateContent({
         model: MODEL_NAME,

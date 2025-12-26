@@ -20,21 +20,21 @@ export function getFriendlyErrorMessage(error: unknown, context: string): string
         rawMessage = JSON.stringify(error);
     }
 
-    // Capture the 429 quota error and "limit: 0" scenario
+    // 429 Quota Error Handling (The issue in the user screenshot)
     if (rawMessage.includes("429") || rawMessage.includes("quota exceeded") || rawMessage.includes("RESOURCE_EXHAUSTED")) {
-        if (rawMessage.includes("limit: 0")) {
-            return "Quota Error (Limit 0): This model is restricted for your account tier. \n\n1. Go to Google AI Studio (ai.google.dev). \n2. Check if Billing is enabled for your project. \n3. Ensure the 'gemini-2.5-flash-image' model is enabled in your region.";
-        }
-        return "Rate Limited: You've sent too many requests. Please wait 60 seconds and try again, or upgrade to a pay-as-you-go plan.";
+        return "Quota Limit Reached: Your Gemini API free tier has reached its capacity. \n\n1. Wait 60 seconds and retry. \n2. Or, visit https://ai.google.dev/gemini-api/docs/billing to set up a pay-as-you-go project for unlimited usage.";
     }
 
-    if (rawMessage.includes("API_KEY_INVALID") || rawMessage.includes("API key not found")) {
-        return "Configuration Error: The API key provided in Vercel is invalid or hasn't propagated yet. Please re-deploy your project in Vercel after double-checking the VITE_API_KEY environment variable.";
+    // API Key Misconfiguration
+    if (rawMessage.includes("MISSING_API_KEY") || rawMessage.includes("API key not found")) {
+        return "Configuration Error: No API Key detected. \n\nIf you are on Vercel/Netlify, ensure you added 'VITE_API_KEY' to your Environment Variables and triggered a NEW deployment.";
     }
 
-    if (rawMessage.toLowerCase().includes("safety")) {
-        return "Safety Block: The AI flagged the content as potentially sensitive. Try using a more neutral image.";
+    // Safety Filter Blocks
+    if (rawMessage.toLowerCase().includes("safety") || rawMessage.includes("HARM_CATEGORY")) {
+        return "Safety Block: The AI's safety filter blocked this image. Try using a simpler, more professional portrait.";
     }
-    
-    return rawMessage.length > 200 ? context : (rawMessage || context);
+
+    // Generic fallback
+    return rawMessage.length > 150 ? context : (rawMessage || context);
 }
