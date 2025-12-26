@@ -17,28 +17,24 @@ export function getFriendlyErrorMessage(error: unknown, context: string): string
     } else if (typeof error === 'string') {
         rawMessage = error;
     } else if (error) {
-        rawMessage = String(error);
+        rawMessage = JSON.stringify(error);
     }
 
-    // Capture the exact error shown in the user's screenshot or our custom throw
-    const isMissingKey = 
-        rawMessage.includes("MISSING_API_KEY_SETUP") || 
-        rawMessage.includes("An API Key must be set when running in a browser") ||
-        rawMessage.includes("API_KEY_MISSING") ||
-        rawMessage.includes("API key not found");
-
-    if (isMissingKey) {
-        const platform = window.location.hostname.includes('netlify') ? 'Netlify' : 'Vercel';
-        return `Setup Required: Your API key is not active yet. \n\n1. Go to ${platform} Settings -> Environment Variables. \n2. Add 'VITE_API_KEY'. \n3. IMPORTANT: Go to the 'Deploys' tab and trigger a 'NEW DEPLOY' to apply the changes.`;
+    // Capture the 429 quota error and "limit: 0" scenario
+    if (rawMessage.includes("429") || rawMessage.includes("quota exceeded") || rawMessage.includes("RESOURCE_EXHAUSTED")) {
+        if (rawMessage.includes("limit: 0")) {
+            return "Quota Error (Limit 0): This model is restricted for your account tier. \n\n1. Go to Google AI Studio (ai.google.dev). \n2. Check if Billing is enabled for your project. \n3. Ensure the 'gemini-2.5-flash-image' model is enabled in your region.";
+        }
+        return "Rate Limited: You've sent too many requests. Please wait 60 seconds and try again, or upgrade to a pay-as-you-go plan.";
     }
 
-    if (rawMessage.toLowerCase().includes("unsupported mime type")) {
-        return `Format Error: Please use a standard image format like PNG or JPG.`;
+    if (rawMessage.includes("API_KEY_INVALID") || rawMessage.includes("API key not found")) {
+        return "Configuration Error: The API key provided in Vercel is invalid or hasn't propagated yet. Please re-deploy your project in Vercel after double-checking the VITE_API_KEY environment variable.";
     }
 
-    if (rawMessage.includes("INVALID_ARGUMENT")) {
-        return "The request was invalid. Please try a different or clearer image.";
+    if (rawMessage.toLowerCase().includes("safety")) {
+        return "Safety Block: The AI flagged the content as potentially sensitive. Try using a more neutral image.";
     }
     
-    return rawMessage ? rawMessage : context;
+    return rawMessage.length > 200 ? context : (rawMessage || context);
 }

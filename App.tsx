@@ -37,6 +37,10 @@ export default function App() {
   const [currentPoseIndex, setCurrentPoseIndex] = useState(0);
   const [wardrobe, setWardrobe] = useState<WardrobeItem[]>(defaultWardrobe);
 
+  /**
+   * Resets the entire studio environment.
+   * Clears errors and loading states to allow retrying after API issues.
+   */
   const handleStartOver = () => {
     setMode('HUB');
     setModelImageUrl(null);
@@ -50,6 +54,7 @@ export default function App() {
   const handlePersonaGenerated = (url: string | null) => {
     setModelImageUrl(url);
     setDisplayImageUrl(url);
+    setError(null);
   };
 
   const handleGarmentSelect = useCallback(async (garmentFile: File, garmentInfo: WardrobeItem) => {
@@ -189,6 +194,7 @@ export default function App() {
                                         const url = URL.createObjectURL(e.target.files[0]);
                                         setModelImageUrl(url);
                                         setDisplayImageUrl(url);
+                                        setError(null);
                                     }
                                 }} />
                             </label>
@@ -203,7 +209,7 @@ export default function App() {
                     )}
 
                     {error && (
-                        <div className="p-6 bg-red-50 text-red-600 rounded-3xl text-sm font-bold border border-red-100 shadow-xl shadow-red-100/20">
+                        <div className="p-6 bg-red-50 text-red-600 rounded-3xl text-sm font-bold border border-red-100 shadow-xl shadow-red-100/20 whitespace-pre-line">
                             {error}
                         </div>
                     )}
@@ -285,7 +291,7 @@ function PersonaWorkflow({ onGenerated, displayImageUrl, isLoading, setIsLoading
             )}
             
             {error && (
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-10 text-red-500 font-bold bg-red-50 px-6 py-3 rounded-2xl border border-red-100">
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-10 text-red-500 font-bold bg-red-50 px-6 py-3 rounded-2xl border border-red-100 whitespace-pre-line">
                 {error}
               </motion.p>
             )}
