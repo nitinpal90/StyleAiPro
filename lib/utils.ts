@@ -20,21 +20,23 @@ export function getFriendlyErrorMessage(error: unknown, context: string): string
         rawMessage = JSON.stringify(error);
     }
 
-    // 429 Quota Error Handling (The issue in the user screenshot)
+    // Specific logic for 429 Quota / Limit 0 errors
     if (rawMessage.includes("429") || rawMessage.includes("quota exceeded") || rawMessage.includes("RESOURCE_EXHAUSTED")) {
-        return "Quota Limit Reached: Your Gemini API free tier has reached its capacity. \n\n1. Wait 60 seconds and retry. \n2. Or, visit https://ai.google.dev/gemini-api/docs/billing to set up a pay-as-you-go project for unlimited usage.";
+        if (rawMessage.includes("limit: 0")) {
+            return "Critical Quota Error: Your Google AI Studio project has a '0 limit' for this model. \n\nFIX: Go to ai.google.dev and enable Billing for your project. Free tier users are occasionally restricted to 0 requests during high-traffic periods.";
+        }
+        return "Rate Limit: Too many requests. Please wait 60 seconds. Consider upgrading your plan at ai.google.dev.";
     }
 
-    // API Key Misconfiguration
-    if (rawMessage.includes("MISSING_API_KEY") || rawMessage.includes("API key not found")) {
-        return "Configuration Error: No API Key detected. \n\nIf you are on Vercel/Netlify, ensure you added 'VITE_API_KEY' to your Environment Variables and triggered a NEW deployment.";
+    // Missing API Key
+    if (rawMessage.includes("MISSING_API_KEY")) {
+        return "Setup Error: API Key not found. \n\nOn Netlify: Add 'API_KEY' to your Environment Variables, then RE-DEPLOY the site.";
     }
 
-    // Safety Filter Blocks
-    if (rawMessage.toLowerCase().includes("safety") || rawMessage.includes("HARM_CATEGORY")) {
-        return "Safety Block: The AI's safety filter blocked this image. Try using a simpler, more professional portrait.";
+    // Filter/Safety
+    if (rawMessage.toLowerCase().includes("safety") || rawMessage.includes("blocked")) {
+        return "AI Safety Block: The image content was flagged as sensitive. Please try a different photo.";
     }
 
-    // Generic fallback
-    return rawMessage.length > 150 ? context : (rawMessage || context);
+    return rawMessage.length > 150 ? "A studio error occurred. Please try again." : (rawMessage || context);
 }
