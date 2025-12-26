@@ -7,25 +7,28 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 
 /**
- * Robust API key detection for Cloudflare and Netlify.
+ * Robust API key detection for Cloudflare, Netlify, and local development.
  */
 const getApiKey = (): string => {
     // 1. Check for standard API_KEY (Cloudflare/Netlify standard)
-    if (typeof process !== 'undefined' && process.env.API_KEY) {
+    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
         return process.env.API_KEY;
     }
     
     // 2. Check for VITE_ prefixed key (Vite/Client-side standard)
-    const viteKey = (process.env as any).VITE_API_KEY;
+    const viteKey = (import.meta as any).env?.VITE_API_KEY || (process.env as any)?.VITE_API_KEY;
     if (viteKey && viteKey !== 'undefined') {
         return viteKey;
     }
 
-    // 3. Last resort: check if injected into global scope by some build tools
-    if ((window as any)._ENV_?.API_KEY) {
-        return (window as any)._ENV_.API_KEY;
+    // 3. Last resort: check global scope (often used in simple build setups)
+    const globalKey = (window as any)._ENV_?.API_KEY || (window as any).API_KEY;
+    if (globalKey) {
+        return globalKey;
     }
 
+    // If you see this error in your console, your environment variable isn't reaching the code.
+    console.error("StyleAI Pro: API_KEY not found in environment.");
     throw new Error("MISSING_API_KEY");
 };
 
@@ -46,7 +49,7 @@ const handleApiResponse = (response: GenerateContentResponse): string => {
         throw new Error(`AI failed: ${candidate.finishReason}`);
     }
     
-    throw new Error("AI returned no image output. The image may be too complex.");
+    throw new Error("AI returned no image output. Try a different image or pose.");
 };
 
 const MODEL_NAME = 'gemini-2.5-flash-image';
@@ -91,7 +94,7 @@ export const generateVirtualTryOnImage = async (modelImageUrl: string, garmentIm
     const garmentData = garmentDataUrl.split(',')[1];
     const garmentImagePart = { inlineData: { mimeType: garmentMimeType, data: garmentData } };
     
-    const prompt = `EXACT CLOTH INTEGRATION: Fit the garment from the second image onto the person in the first image. Preserve patterns and colors exactly. Return ONLY the final high-resolution image.`;
+    const prompt = `EXACT CLOTH INTEGRATION: Fit the garment from the second image onto the person in the first image. Preserve patterns, branding, and colors exactly. Return ONLY the final high-resolution image.`;
 
     const response = await ai.models.generateContent({
         model: MODEL_NAME,
