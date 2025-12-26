@@ -4,209 +4,125 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { UploadCloudIcon, CheckCircleIcon } from './icons';
-import { Compare } from './ui/compare';
-import { generateModelImage } from '../services/geminiService';
-import Spinner from './Spinner';
-import { getFriendlyErrorMessage } from '../lib/utils';
+import React from 'react';
+import { motion } from 'framer-motion';
+import { InfinityIcon, DownloadIcon, SparklesIcon, ShirtIcon, UserCircleIcon } from './icons';
 
 interface StartScreenProps {
-  onModelFinalized: (modelUrl: string) => void;
+  onSelectPersona: () => void;
+  onSelectProduct: () => void;
 }
 
-const StartScreen: React.FC<StartScreenProps> = ({ onModelFinalized }) => {
-  const [userImageUrl, setUserImageUrl] = useState<string | null>(null);
-  const [generatedModelUrl, setGeneratedModelUrl] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleFileSelect = useCallback(async (file: File) => {
-    // Check supported types explicitly for better user feedback
-    const supportedTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif'];
-    if (!supportedTypes.includes(file.type)) {
-        setError(`File type '${file.type}' is not supported. Please use a format like PNG, JPEG, or WEBP.`);
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        const dataUrl = e.target?.result as string;
-        setUserImageUrl(dataUrl);
-        setIsGenerating(true);
-        setGeneratedModelUrl(null);
-        setError(null);
-        try {
-            const result = await generateModelImage(file);
-            setGeneratedModelUrl(result);
-        } catch (err) {
-            setError(getFriendlyErrorMessage(err, 'Failed to call the Gemini API. Please try again.'));
-            setUserImageUrl(null);
-        } finally {
-            setIsGenerating(false);
-        }
-    };
-    reader.readAsDataURL(file);
-  }, []);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFileSelect(e.target.files[0]);
-    }
-  };
-
-  const reset = () => {
-    setUserImageUrl(null);
-    setGeneratedModelUrl(null);
-    setIsGenerating(false);
-    setError(null);
-  };
-
+const StartScreen: React.FC<StartScreenProps> = ({ onSelectPersona, onSelectProduct }) => {
   return (
-    <AnimatePresence mode="wait">
-      {!userImageUrl ? (
-        <motion.div
-          key="uploader"
-          className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 items-center gap-16 md:gap-24"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 20 }}
-        >
-          <div className="text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-full border border-gray-100 mb-8">
-              <span className="w-2 h-2 bg-indigo-500 rounded-full animate-ping" />
-              <span className="text-[10px] font-black text-gray-900 uppercase tracking-widest">Next-Gen AI Try-On</span>
-            </div>
-            <h1 className="text-6xl md:text-8xl font-serif font-bold text-gray-900 leading-[0.9] tracking-tighter">
-              The Studio <br/>
-              <span className="text-gray-300 italic">for you.</span>
-            </h1>
-            <p className="mt-8 text-xl text-gray-500 leading-relaxed max-w-lg mx-auto lg:mx-0 font-medium">
-              Transform any photo into a professional AI model. Try on garments instantly with perfect physics and lighting.
-            </p>
-            <div className="mt-12 flex flex-col items-center lg:items-start gap-6">
-              <label htmlFor="image-upload-start" className="relative group overflow-hidden px-12 py-5 text-xl font-black text-white bg-gray-900 rounded-[2rem] cursor-pointer shadow-2xl shadow-gray-200 transition-all hover:scale-105 active:scale-95">
-                <span className="relative z-10 flex items-center">
-                  <UploadCloudIcon className="w-6 h-6 mr-3" />
-                  Create Digital Twin
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              </label>
-              <input id="image-upload-start" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
-              <div className="flex items-center gap-4 text-gray-400 text-[11px] font-bold uppercase tracking-widest">
-                <span>Fast Processing</span>
-                <span className="w-1 h-1 bg-gray-200 rounded-full" />
-                <span>Unlimited Tries</span>
-              </div>
-              {error && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }} 
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="bg-red-50 border border-red-100 p-4 rounded-2xl max-w-md"
-                >
-                  <p className="text-red-600 text-xs font-bold leading-relaxed">{error}</p>
-                </motion.div>
-              )}
-            </div>
-          </div>
-          
-          <div className="relative group">
-            <div className="absolute -inset-10 bg-indigo-50 rounded-full blur-[100px] opacity-50 group-hover:opacity-100 transition-opacity" />
-            <div className="relative p-3 bg-white rounded-[3rem] shadow-2xl border border-gray-100 overflow-hidden transform rotate-2 group-hover:rotate-0 transition-transform duration-700">
-                <Compare
-                  firstImage="https://storage.googleapis.com/gemini-95-icons/asr-tryon.jpg"
-                  secondImage="https://storage.googleapis.com/gemini-95-icons/asr-tryon-model.png"
-                  slideMode="drag"
-                  className="w-full max-w-md aspect-[3/4.5] rounded-[2.2rem]"
-                />
-            </div>
-          </div>
-        </motion.div>
-      ) : (
-        <motion.div
-          key="compare-view"
-          className="w-full max-w-6xl mx-auto flex flex-col lg:flex-row items-center justify-center gap-20"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 1.1 }}
-        >
-          <div className="lg:w-1/2 flex flex-col items-center lg:items-start text-center lg:text-left">
-            <h1 className="text-5xl md:text-7xl font-serif font-bold text-gray-900 tracking-tighter">
-              Reality, <br/>
-              <span className="text-indigo-500">Enhanced.</span>
-            </h1>
-            <p className="mt-6 text-xl text-gray-500 font-medium">
-              We've mapped your body features to a digital model. You can now use this twin to try on any outfit seamlessly.
-            </p>
-            
-            <AnimatePresence mode="wait">
-              {isGenerating ? (
-                <motion.div 
-                  key="loading"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="flex items-center gap-5 mt-12 px-8 py-5 bg-gray-50 rounded-3xl border border-gray-100 shadow-xl shadow-gray-100"
-                >
-                  <Spinner />
-                  <div className="flex flex-col">
-                    <span className="text-lg font-black text-gray-900 leading-none">Mapping Physics</span>
-                    <span className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-2">Almost ready...</span>
-                  </div>
-                </motion.div>
-              ) : error ? (
-                <motion.div 
-                  key="error"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="mt-12 p-8 bg-red-50 rounded-[2.5rem] border border-red-100 text-center lg:text-left"
-                >
-                  <p className="font-black text-red-600 uppercase tracking-widest text-sm mb-2">Process Interrupted</p>
-                  <p className="text-red-500 font-medium mb-6">{error}</p>
-                  <button onClick={reset} className="px-8 py-3 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700 transition-all text-sm uppercase tracking-widest">
-                    Try Again
-                  </button>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="success"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex flex-col sm:flex-row items-center gap-4 mt-12 w-full"
-                >
-                  <button 
-                    onClick={() => onModelFinalized(generatedModelUrl!)}
-                    className="w-full sm:w-auto px-12 py-5 text-xl font-black text-white bg-indigo-600 rounded-[2rem] hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 active:scale-95 flex items-center justify-center gap-3"
-                  >
-                    Enter Studio
-                    <CheckCircleIcon className="w-6 h-6" />
-                  </button>
-                  <button 
-                    onClick={reset}
-                    className="w-full sm:w-auto px-12 py-5 text-lg font-black text-gray-400 hover:text-gray-900 bg-gray-50 rounded-[2rem] hover:bg-gray-100 transition-all uppercase tracking-widest"
-                  >
-                    Change Base
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          
-          <div className="lg:w-1/2 flex justify-center">
-            <div className={`p-3 bg-white rounded-[3.5rem] shadow-2xl border border-gray-100 overflow-hidden ${isGenerating ? 'animate-pulse scale-95 opacity-60' : 'hover:scale-105'} transition-all duration-1000`}>
-              <Compare
-                firstImage={userImageUrl!}
-                secondImage={generatedModelUrl ?? userImageUrl!}
-                slideMode="drag"
-                className="w-[320px] h-[480px] sm:w-[400px] sm:h-[600px] lg:w-[480px] lg:h-[720px] rounded-[2.5rem]"
-              />
-            </div>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <div className="w-full max-w-7xl mx-auto flex flex-col items-center py-10">
+      {/* Premium Badge */}
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="inline-flex items-center gap-3 px-5 py-2 bg-white border border-gray-100 shadow-xl shadow-gray-100/50 rounded-full mb-12"
+      >
+        <span className="w-2.5 h-2.5 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(99,102,241,0.5)]" />
+        <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Unlimited Studio Production</span>
+      </motion.div>
+
+      {/* Hero Heading */}
+      <motion.h1 
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+        className="text-7xl md:text-[10rem] font-sans font-black text-gray-900 tracking-tighter leading-[0.85] max-w-6xl text-center mb-12"
+      >
+        Product Vision <br/>
+        <span className="text-transparent bg-clip-text bg-gradient-to-br from-indigo-600 via-violet-600 to-indigo-800">Perfected.</span>
+      </motion.h1>
+
+      <motion.p 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        className="text-xl text-gray-500 max-w-3xl font-medium leading-relaxed text-center mb-24 px-6"
+      >
+        Choose a specialized module to transform your content. Professional photography, realistic fabric physics, and unlimited variations in one suite.
+      </motion.p>
+
+      {/* Interactive Studio Modules */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 w-full max-w-5xl mb-40 px-6">
+        <StudioCard 
+          icon={<UserCircleIcon className="w-9 h-9 text-indigo-600" />}
+          title="Persona Studio"
+          description="Transform casual user portraits into professional studio-grade fashion models while maintaining facial recognition."
+          onClick={onSelectPersona}
+          accent="indigo"
+          delay={0.4}
+        />
+        <StudioCard 
+          icon={<ShirtIcon className="w-9 h-9 text-violet-600" />}
+          title="Fit Studio"
+          description="Take professional model assets and integrate brand garments with hyper-realistic drape, texture, and lighting."
+          onClick={onSelectProduct}
+          accent="violet"
+          delay={0.5}
+        />
+      </div>
+
+      {/* Feature Highlighting Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-16 w-full max-w-6xl pb-20">
+        <FeatureCard 
+          icon={<InfinityIcon className="w-6 h-6 text-indigo-500" />}
+          title="Infinite Assets"
+          description="No caps on generation. Create your entire lookbook or seasonal campaign in a single professional session."
+        />
+        <FeatureCard 
+          icon={<DownloadIcon className="w-6 h-6 text-violet-500" />}
+          title="Ultra HD Export"
+          description="Every asset is processed and exported in professional resolution, ready for immediate e-commerce listing."
+        />
+        <FeatureCard 
+          icon={<SparklesIcon className="w-6 h-6 text-pink-500" />}
+          title="Physics Precision"
+          description="Neural fitting ensures your garments retain exact colors, branding, patterns, and authentic fabric drape."
+        />
+      </div>
+    </div>
   );
 };
+
+const StudioCard = ({ icon, title, description, onClick, accent, delay }: any) => (
+  <motion.button 
+    initial={{ opacity: 0, y: 30 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+    onClick={onClick}
+    className={`group relative p-14 bg-white rounded-[4rem] border border-gray-100 text-left hover:shadow-[0_64px_128px_-32px_rgba(0,0,0,0.1)] transition-all overflow-hidden active:scale-[0.97] h-full flex flex-col border-b-8 border-b-${accent}-500/0 hover:border-b-${accent}-500`}
+  >
+    {/* Decorative Background Blob */}
+    <div className={`absolute -top-20 -right-20 w-64 h-64 bg-${accent}-50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 -z-10`} />
+
+    <div className={`bg-${accent}-50 w-20 h-20 rounded-[2rem] flex items-center justify-center mb-12 group-hover:scale-110 group-hover:rotate-6 group-hover:bg-${accent}-100 transition-all duration-500 shadow-xl shadow-${accent}-100/20`}>
+      {icon}
+    </div>
+    
+    <h3 className="text-4xl font-serif font-bold text-gray-900 mb-6 group-hover:text-indigo-600 transition-colors">{title}</h3>
+    <p className="text-gray-500 font-medium leading-relaxed mb-12 text-lg flex-grow">{description}</p>
+    
+    <div className={`inline-flex items-center gap-5 font-black text-[10px] uppercase tracking-[0.3em] text-${accent}-600`}>
+      Enter Studio
+      <div className={`w-10 h-10 rounded-2xl bg-${accent}-600 text-white flex items-center justify-center group-hover:translate-x-4 transition-transform shadow-2xl shadow-${accent}-300`}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-5 h-5"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+      </div>
+    </div>
+  </motion.button>
+);
+
+const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
+  <div className="bg-white p-12 rounded-[3.5rem] border border-gray-50 text-left hover:border-indigo-100 hover:shadow-2xl hover:shadow-gray-100 transition-all duration-500 group">
+    <div className="bg-gray-50 w-16 h-16 rounded-3xl flex items-center justify-center mb-10 group-hover:scale-110 group-hover:bg-indigo-50 transition-all">
+      {icon}
+    </div>
+    <h3 className="text-2xl font-black text-gray-900 mb-5 tracking-tight">{title}</h3>
+    <p className="text-gray-500 font-medium leading-relaxed text-sm opacity-80 group-hover:opacity-100 transition-opacity">{description}</p>
+  </div>
+);
 
 export default StartScreen;

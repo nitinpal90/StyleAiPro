@@ -28,7 +28,6 @@ const getApiKey = () => {
     const sanitizedKey = key?.trim();
     
     if (!sanitizedKey || sanitizedKey === 'undefined' || sanitizedKey === '') {
-        // We throw a specific string that our error handler in utils.ts will catch
         throw new Error("MISSING_API_KEY_SETUP");
     }
     
@@ -76,7 +75,7 @@ const handleApiResponse = (response: GenerateContentResponse): string => {
         throw new Error(`AI failed: ${candidate.finishReason}`);
     }
     
-    throw new Error("AI returned no image. Try a clearer photo.");
+    throw new Error("AI returned no image. Ensure images are clear and well-lit.");
 };
 
 const model = 'gemini-2.5-flash-image';
@@ -85,7 +84,7 @@ export const generateModelImage = async (userImage: File): Promise<string> => {
     const apiKey = getApiKey();
     const ai = new GoogleGenAI({ apiKey });
     const userImagePart = await fileToPart(userImage);
-    const prompt = "High-end fashion photography. Professional full-body model standing in a studio with a neutral gray background. Return ONLY the image.";
+    const prompt = "PROFESSIONAL PERSONA TRANSFORMATION: Take this person and place them in a high-end fashion studio setting. Use professional commercial lighting, a clean minimalist background, and 8k photorealistic quality. Keep their core facial features identical but professionalized for a model portfolio. Return ONLY the final professional image.";
     const response = await ai.models.generateContent({
         model,
         contents: { parts: [userImagePart, { text: prompt }] },
@@ -99,7 +98,13 @@ export const generateVirtualTryOnImage = async (modelImageUrl: string, garmentIm
     const ai = new GoogleGenAI({ apiKey });
     const modelImagePart = dataUrlToPart(modelImageUrl);
     const garmentImagePart = await fileToPart(garmentImage);
-    const prompt = "E-commerce virtual try-on. Fit the garment precisely onto the model. Keep face, pose, and background exactly the same. Return ONLY the final image.";
+    
+    // MAXIMUM FIDELITY PROMPT
+    const prompt = `EXACT CLOTH INTEGRATION: Fit the garment from the second image onto the model from the first image. 
+    CRITICAL INSTRUCTION: You MUST maintain the EXACT pattern, color, brand logos, and texture of the cloth provided in the second image. DO NOT genericize the garment. 
+    Ensure realistic physics, wrinkles, and shadows based on the model's pose. The model's identity and background must remain UNCHANGED.
+    Return ONLY the final high-resolution image.`;
+
     const response = await ai.models.generateContent({
         model,
         contents: { parts: [modelImagePart, garmentImagePart, { text: prompt }] },
@@ -112,7 +117,7 @@ export const generatePoseVariation = async (tryOnImageUrl: string, poseInstructi
     const apiKey = getApiKey();
     const ai = new GoogleGenAI({ apiKey });
     const tryOnImagePart = dataUrlToPart(tryOnImageUrl);
-    const prompt = `Change the model's pose to: "${poseInstruction}". Keep identity and outfit identical. Return ONLY the image.`;
+    const prompt = `STANCE VARIATION: Update the model's stance to: "${poseInstruction}". You must preserve the model's identity and the EXACT fabric details of the clothing. The lighting and studio background must stay consistent. Return ONLY the final image.`;
     const response = await ai.models.generateContent({
         model,
         contents: { parts: [tryOnImagePart, { text: prompt }] },

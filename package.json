@@ -17,8 +17,7 @@
     "tailwind-merge": "^2.4.0",
     "@tsparticles/react": "^3.0.0",
     "@tsparticles/engine": "^3.5.0",
-    "@tsparticles/slim": "^3.5.0",
-    "@supabase/supabase-js": "^2.45.4"
+    "@tsparticles/slim": "^3.5.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
