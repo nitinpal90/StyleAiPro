@@ -1,20 +1,54 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# StyleAI Pro
 
-# Run and deploy your AI Studio app
+High-end AI fashion studio. Professional persona transformation and virtual try-on with physical accuracy.
 
-This contains everything you need to run your app locally.
+## Overview
 
-View your app in AI Studio: https://ai.studio/apps/drive/1bCzGkD8x37daidEBNBNXF8Br2aqWtKBX
+StyleAI Pro is a professional-grade fashion AI suite that allows users to generate high-fidelity studio portraits and virtually fit garments onto models. Powered by the Google Gemini API, it provides hyper-realistic fabric physics, lighting, and texture preservation.
 
-## Run Locally
+## Key Features
 
-**Prerequisites:**  Node.js
+- **Persona Studio**: Convert standard casual photos into professional studio-grade fashion portraits.
+- **Fit Studio**: Seamlessly integrate brand garments onto AI models with realistic drape and physics.
+- **Dynamic Posing**: Generate multiple pose variations for the same model and outfit.
+- **High-Resolution Exports**: Optimized for e-commerce and professional lookbook production.
 
+## Technology Stack
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+- **Framework**: React + Vite
+- **Styling**: Tailwind CSS
+- **Animations**: Framer Motion
+- **AI Engine**: Google Gemini API (`gemini-2.5-flash-image`)
+
+## Setup and Installation
+
+1. **Clone the repository**:
+   ```bash
+   git clone [repository-url]
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Configure Environment Variables**:
+   Set your `API_KEY` in your environment. For local development, you can set this in your shell or use your preferred environment management tool. For production, set this in your deployment platform's dashboard (e.g., Cloudflare Pages, Netlify).
+
+4. **Start the Development Server**:
+   ```bash
+   npm run dev
+   ```
+
+## Deployment
+
+This project is optimized for **Cloudflare Pages**.
+
+- **Framework Preset**: Vite
+- **Build Command**: `npm run build`
+- **Output Directory**: `dist`
+- **Environment Variables**: Ensure the `API_KEY` variable is added in the Cloudflare dashboard under `Settings > Environment variables`.
+
+## License
+
+Apache-2.0
