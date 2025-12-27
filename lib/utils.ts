@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -23,14 +22,14 @@ export function getFriendlyErrorMessage(error: unknown, context: string): string
     // Handle 429 Quota / Resource Exhausted errors
     if (rawMessage.includes("429") || rawMessage.includes("quota exceeded") || rawMessage.includes("RESOURCE_EXHAUSTED")) {
         if (rawMessage.includes("limit: 0")) {
-            return "Quota Restriction: Your project is currently at '0 limit'. \n\nFIX: Go to https://ai.google.dev/gemini-api/docs/billing and ensure you have enabled a payment method. Google often restricts free tier users with high activity.";
+            return "Quota Restriction: Your project is currently at '0 limit'. \n\nFIX: Go to your Google AI Studio billing settings and ensure you have enabled a payment method. Google often restricts free tier users with high activity.";
         }
         return "Rate Limit: Too many requests. Wait 60 seconds and try again. For higher limits, check your billing status at Google AI Studio.";
     }
 
     // Handle missing API Key
     if (rawMessage.includes("MISSING_API_KEY")) {
-        return "Setup Error: API Key not detected in Netlify. \n\nFIX: Go to Site Settings > Environment Variables, add 'API_KEY', and then click 'Clear cache and deploy site' in the Deploys tab.";
+        return "Setup Error: API key not detected. Please configure VITE_GOOGLE_API_KEY.";
     }
 
     // Handle Safety blocks

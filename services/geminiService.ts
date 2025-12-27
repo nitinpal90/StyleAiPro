@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -7,27 +6,16 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 
 /**
- * Robust API key detection for Cloudflare, Netlify, and local development.
+ * Robust API key detection for Vite applications.
  */
 const getApiKey = (): string => {
-    // 1. Check for standard API_KEY (Cloudflare/Netlify injected at build/runtime)
-    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-        return process.env.API_KEY;
-    }
+    const key = (import.meta as any).env?.VITE_GOOGLE_API_KEY;
     
-    // 2. Check for VITE_ prefixed key (Vite-specific standard)
-    const viteKey = (import.meta as any).env?.VITE_API_KEY;
-    if (viteKey && viteKey !== 'undefined') {
-        return viteKey;
+    if (key && key !== 'undefined') {
+        return key;
     }
 
-    // 3. Fallback for specific deployment scenarios
-    const globalKey = (window as any).API_KEY || (window as any)._ENV_?.API_KEY;
-    if (globalKey) {
-        return globalKey;
-    }
-
-    console.error("StyleAI Pro Error: No API_KEY found in environment variables. Ensure 'API_KEY' is set in your Cloudflare Pages 'Environment Variables' settings.");
+    console.error("Setup Error: API key not detected. Please configure VITE_GOOGLE_API_KEY.");
     throw new Error("MISSING_API_KEY");
 };
 
