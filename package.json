@@ -1,7 +1,7 @@
 {
-  "name": "styleai-pro",
+  "name": "style-ai-pro",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,20 +9,24 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@google/genai": "^1.10.0",
+    "@tsparticles/engine": "^3.5.0",
+    "@tsparticles/react": "^3.0.0",
+    "@tsparticles/slim": "^3.5.0",
+    "clsx": "^2.1.1",
+    "framer-motion": "^11.2.12",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "@google/genai": "^1.10.0",
-    "framer-motion": "^11.2.12",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.4.0",
-    "@tsparticles/react": "^3.0.0",
-    "@tsparticles/engine": "^3.5.0",
-    "@tsparticles/slim": "^3.5.0"
+    "tailwind-merge": "^2.4.0"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.16",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3"
   }
 }
